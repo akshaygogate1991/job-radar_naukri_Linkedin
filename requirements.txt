@@ -1,0 +1,5 @@
+# Dependencies for the Streamlit Cloud dashboard.
+# (Streamlit Cloud installs from this file automatically.)
+streamlit>=1.31
+requests>=2.31
+reportlab>=4.0

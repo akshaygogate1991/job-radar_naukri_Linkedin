@@ -1,0 +1,24 @@
+# ── Secrets (NEVER commit) ──────────────────────────────────
+secret_config.py
+.env
+.streamlit/secrets.toml
+
+# ── Personal data & sessions ────────────────────────────────
+logs/
+resumes/
+*.session
+*_session.json
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# ── OS / editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
