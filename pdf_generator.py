@@ -21,7 +21,7 @@ from reportlab.platypus import (
 from reportlab.lib import colors
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config.profile import CANDIDATE, EXPERIENCE_SUMMARY, BASE_DIR, PROJECTS, GITHUB
+from config.profile import CANDIDATE, EXPERIENCE_SUMMARY, BASE_DIR, PROJECTS, GITHUB, CORE_SKILLS
 
 
 def _safe_filename(text: str) -> str:
@@ -91,7 +91,15 @@ def generate_tailored_resume(job_title: str, company: str,
 
     # ── Core Skills (AI-tailored) ──
     elements.append(Paragraph("CORE SKILLS", section_style))
-    skills_formatted = " &nbsp;•&nbsp; ".join([s.strip() for s in skills.split(",")])
+    # Always lead with the guaranteed core skills (Power BI, Power Automate, …),
+    # then add the JD-tailored skills — de-duplicated, case-insensitively.
+    merged, seen = [], set()
+    for s in list(CORE_SKILLS) + [x.strip() for x in skills.split(",")]:
+        s = s.strip()
+        if s and s.lower() not in seen:
+            merged.append(s)
+            seen.add(s.lower())
+    skills_formatted = " &nbsp;•&nbsp; ".join(merged)
     elements.append(Paragraph(skills_formatted, body_style))
 
     # ── Work Experience (static) ──

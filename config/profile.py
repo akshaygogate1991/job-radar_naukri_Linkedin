@@ -54,6 +54,12 @@ SEARCH = {
         "Operations Analyst",
         "MIS Analyst",
         "Reporting Analyst",
+        # AI / Agent roles (new target)
+        "AI Agent Developer",
+        "AI Engineer",
+        "Generative AI Engineer",
+        "AI Automation Engineer",
+        "Agentic AI Developer",
     ],
     "locations": [
         # Preferred cities
@@ -127,7 +133,8 @@ Certification: Data Science & ML – Scaler Academy (Jul 2024–Present)
   Learning: Python, ML models, SQL, Statistics, Tableau, Product Analysis
   In progress: Neural Networks, Computer Vision
 
-Key projects (all deployed on Streamlit):
+Key projects:
+  - AI Job-Application Agent: Built an autonomous agent that scrapes multiple job portals, uses the Claude LLM API to match job descriptions and tailor resumes/cover letters, automates applications with Playwright, and surfaces results in a Streamlit + Supabase cloud dashboard. Demonstrates LLM/agent building, prompt engineering, and end-to-end automation.
   - Ola Driver Churn: Ensemble ML model with live prediction interface
   - LoanTap Credit Risk: Logistic regression for loan default prediction
   - Walmart CLT Analysis: Confidence intervals on Black Friday sales data
@@ -139,6 +146,12 @@ Key projects (all deployed on Streamlit):
 GITHUB = "https://github.com/akshaygogate1991"
 
 PROJECTS = [
+    {
+        "name":  "AI Job-Application Agent",
+        "desc":  "Autonomous multi-portal agent — Claude LLM API for JD matching & resume tailoring, Playwright browser automation, Streamlit + Supabase dashboard",
+        "url":   "https://github.com/akshaygogate1991/job-radar_naukri_Linkedin",
+        "label": "GitHub",
+    },
     {
         "name":  "Ola Driver Churn Prediction",
         "desc":  "Ensemble ML model with a live prediction app",
@@ -163,6 +176,13 @@ PROJECTS = [
         "url":   "https://github.com/akshaygogate1991/Yulu---Hypothesis-Testing",
         "label": "GitHub",
     },
+]
+
+# Skills guaranteed to appear on EVERY tailored resume (merged with the
+# JD-tailored skills the AI generates, so they never get dropped).
+CORE_SKILLS = [
+    "Power BI", "Power Automate", "Python", "SQL",
+    "Machine Learning", "Generative AI (LLM) Integration", "Workflow Automation",
 ]
 
 # ── Easy Apply default answers ───────────────────────────────
