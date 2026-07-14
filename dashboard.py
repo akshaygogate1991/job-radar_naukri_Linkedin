@@ -246,41 +246,29 @@ with tab_apply:
                                      key=key_for(url, "cl"),
                                      label_visibility="collapsed")
 
-            # tailored resume
-            with st.expander("📄 Tailored resume"):
-                existing = find_existing_resume(j.get("company", ""), j.get("title", ""))
-                if existing:
-                    with open(existing, "rb") as f:
-                        st.download_button(
-                            "⬇️ Download tailored resume (already made)",
-                            data=f.read(),
-                            file_name=os.path.basename(existing),
-                            mime="application/pdf",
-                            key=key_for(url, "dl"),
-                        )
-                    st.caption(os.path.basename(existing))
-                else:
-                    if st.button("⚙️ Generate resume for this job",
-                                 key=key_for(url, "gen")):
-                        path = build_resume(j)
-                        if path:
-                            with open(path, "rb") as f:
-                                st.download_button(
-                                    "⬇️ Download generated resume",
-                                    data=f.read(),
-                                    file_name=os.path.basename(path),
-                                    mime="application/pdf",
-                                    key=key_for(url, "dlgen"),
-                                )
-                    if os.path.exists(RESUME_PDF):
-                        with open(RESUME_PDF, "rb") as f:
+            # tailored resume — regenerated fresh so it always has project links
+            with st.expander("📄 Tailored resume (with project links)"):
+                if st.button("⚙️ Generate resume for this job",
+                             key=key_for(url, "gen")):
+                    path = build_resume(j)
+                    if path:
+                        with open(path, "rb") as f:
                             st.download_button(
-                                "⬇️ Master resume (fallback)",
+                                "⬇️ Download tailored resume",
                                 data=f.read(),
-                                file_name=os.path.basename(RESUME_PDF),
+                                file_name=os.path.basename(path),
                                 mime="application/pdf",
-                                key=key_for(url, "dlmaster"),
+                                key=key_for(url, "dlgen"),
                             )
+                if os.path.exists(RESUME_PDF):
+                    with open(RESUME_PDF, "rb") as f:
+                        st.download_button(
+                            "⬇️ Master resume (fallback)",
+                            data=f.read(),
+                            file_name=os.path.basename(RESUME_PDF),
+                            mime="application/pdf",
+                            key=key_for(url, "dlmaster"),
+                        )
 
 
 # ── APPLIED ──────────────────────────────────────────────────────

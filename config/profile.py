@@ -135,6 +135,36 @@ Key projects (all deployed on Streamlit):
   - Target SQL Project: 100,000+ e-commerce orders analysis
 """
 
+# ── Portfolio links (added to every tailored resume) ────────
+GITHUB = "https://github.com/akshaygogate1991"
+
+PROJECTS = [
+    {
+        "name":  "Ola Driver Churn Prediction",
+        "desc":  "Ensemble ML model with a live prediction app",
+        "url":   "https://ola---ml-model-ensemble-learning-ypzklghpr6qff66jhjr7xp.streamlit.app/",
+        "label": "Live app",
+    },
+    {
+        "name":  "LoanTap Credit Risk Model",
+        "desc":  "Logistic-regression loan-default prediction, deployed on Streamlit",
+        "url":   "https://loantap-ml-model-logistic-regression-eqegxlmuxedm7fyyn4us2q.streamlit.app/",
+        "label": "Live app",
+    },
+    {
+        "name":  "Walmart CLT & Confidence Intervals",
+        "desc":  "Statistical analysis of Black Friday purchasing behaviour",
+        "url":   "https://github.com/akshaygogate1991/Walmart---Confidence-Interval-and-CLT",
+        "label": "GitHub",
+    },
+    {
+        "name":  "Yulu Hypothesis Testing",
+        "desc":  "T-test, ANOVA & Chi-square on bike-sharing demand",
+        "url":   "https://github.com/akshaygogate1991/Yulu---Hypothesis-Testing",
+        "label": "GitHub",
+    },
+]
+
 # ── Easy Apply default answers ───────────────────────────────
 # Bot matches question text (lowercase, partial match) to these answers.
 # If NO match is found, bot skips that job & sends Telegram alert

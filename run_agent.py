@@ -117,8 +117,16 @@ def main():
 
     # ── Mark complete & send summary ──────────────────────────
     mark_run_complete(linkedin_count, naukri_count, hirist_count)
-    send_manual_digest()   # grouped email: LinkedIn + Naukri + Hirist external jobs
-    send_daily_summary()
+
+    # Each wrapped so a failure here can NEVER skip the cloud sync below.
+    try:
+        send_manual_digest()   # grouped email: LinkedIn + Naukri + Hirist external jobs
+    except Exception as _e:
+        print(f"Manual digest email failed: {_e}")
+    try:
+        send_daily_summary()
+    except Exception as _e:
+        print(f"Daily summary email failed: {_e}")
 
     # Push today's jobs to Supabase so the phone dashboard stays in sync
     try:

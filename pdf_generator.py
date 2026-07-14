@@ -21,7 +21,7 @@ from reportlab.platypus import (
 from reportlab.lib import colors
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config.profile import CANDIDATE, EXPERIENCE_SUMMARY, BASE_DIR
+from config.profile import CANDIDATE, EXPERIENCE_SUMMARY, BASE_DIR, PROJECTS, GITHUB
 
 
 def _safe_filename(text: str) -> str:
@@ -79,7 +79,8 @@ def generate_tailored_resume(job_title: str, company: str,
     contact_line = (
         f"{CANDIDATE['email']} | {CANDIDATE['phone']} | "
         f"{CANDIDATE['location']}<br/>"
-        f'<a href="{CANDIDATE["linkedin"]}">{CANDIDATE["linkedin"]}</a>'
+        f'<a href="{CANDIDATE["linkedin"]}" color="#0a66c2">LinkedIn</a> &nbsp;|&nbsp; '
+        f'<a href="{GITHUB}" color="#0a66c2">GitHub</a>'
     )
     elements.append(Paragraph(contact_line, contact_style))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#0a66c2")))
@@ -100,12 +101,24 @@ def generate_tailored_resume(job_title: str, company: str,
         line = line.strip()
         if not line:
             continue
+        if "Key projects" in line:
+            break  # projects are rendered below as a dedicated linked section
         if line.startswith("-"):
             elements.append(Paragraph(f"• {line[1:].strip()}", bullet_style))
-        elif line.endswith(":") or "Currently:" in line or "Previous:" in line or "Education:" in line.split(":")[0] or "Key projects" in line:
+        elif line.endswith(":") or "Currently:" in line or "Previous:" in line or "Education:" in line.split(":")[0]:
             elements.append(Paragraph(f"<b>{line}</b>", body_style))
         else:
             elements.append(Paragraph(line, body_style))
+
+    # ── Key Projects (clickable GitHub / Streamlit links) ──
+    if PROJECTS:
+        elements.append(Paragraph("KEY PROJECTS", section_style))
+        for p in PROJECTS:
+            proj_line = (
+                f'<b>{p["name"]}</b> — {p["desc"]} &nbsp;'
+                f'[<a href="{p["url"]}" color="#0a66c2">{p["label"]}</a>]'
+            )
+            elements.append(Paragraph(proj_line, body_style))
 
     # ── Footer note ──
     elements.append(Spacer(1, 8))
