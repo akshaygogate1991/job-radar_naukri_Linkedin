@@ -209,6 +209,10 @@ EASY_APPLY_ANSWERS = {
 
     # Experience
     "years of experience":                  "2",
+    "hands-on experience":                  "2",
+    "hands on experience":                  "2",
+    "years of hands":                       "2",
+    "how many years":                       "2",
     "total experience":                     "10",
     "experience in data":                   "2",
     "experience in python":                 "2",

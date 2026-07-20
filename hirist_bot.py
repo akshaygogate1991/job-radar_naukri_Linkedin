@@ -1075,47 +1075,59 @@ def run_hirist_bot():
                     # Truth source: Hirist's UI state
                     confirmed = False
 
-                    # Give Hirist extra time to process
-                    human_delay(3, 5)
+                    success_selectors = [
+                        "text=Your application has been submitted successfully",
+                        "text=application has been submitted",
+                        "text=Application Submitted",
+                        "text=successfully applied",
+                        "text=Applied successfully",
+                        "text=Application Received",
+                        "text=Job Applied",
+                        "text=You have already applied",
+                        "text=Already Applied",
+                        "text=Application sent",
+                    ]
 
-                    try:
-                        # Method 1 (STRONGEST): URL changes to /job/applied
-                        current_url = new_page.url.lower()
-                        if "/job/applied" in current_url or "/applied" in current_url:
-                            confirmed = True
-                            print(f"  Confirmed via URL: {current_url}")
+                    # Poll for up to ~20s — confirmation can take several seconds
+                    # to render, which is why some applies looked like failures.
+                    for attempt in range(5):
+                        human_delay(3, 4)
+                        try:
+                            # Method 1 (STRONGEST): URL changes to /job/applied
+                            current_url = new_page.url.lower()
+                            if "/job/applied" in current_url or "/applied" in current_url:
+                                confirmed = True
+                                print(f"  Confirmed via URL: {current_url}")
+                                break
 
-                        # Method 2: Success message on page
-                        if not confirmed:
-                            success_selectors = [
-                                "text=Your application has been submitted successfully",
-                                "text=application has been submitted",
-                                "text=Application Submitted",
-                                "text=successfully applied",
-                                "text=Applied successfully",
-                                "text=Application Received",
-                                "text=Job Applied",
-                            ]
+                            # Method 2: Success message on page
                             for sel in success_selectors:
                                 try:
                                     if new_page.locator(sel).count() > 0:
                                         confirmed = True
                                         print(f"  Confirmed via message: {sel}")
                                         break
-                                except:
+                                except Exception:
                                     pass
+                            if confirmed:
+                                break
 
-                        # Method 3: "Applied" button state
-                        if not confirmed:
-                            applied_btn = new_page.locator(
-                                "button:has-text('Applied'):not(:has-text('Apply Now'))"
-                            )
-                            if applied_btn.count() > 0:
-                                confirmed = True
-                                print("  Confirmed via 'Applied' button state")
+                            # Method 3: button flipped to "Applied"
+                            try:
+                                applied_btn = new_page.locator(
+                                    "button:has-text('Applied'):not(:has-text('Apply Now')), "
+                                    "span:has-text('Applied'):not(:has-text('Apply Now'))"
+                                )
+                                if applied_btn.count() > 0:
+                                    confirmed = True
+                                    print("  Confirmed via 'Applied' button state")
+                                    break
+                            except Exception:
+                                pass
 
-                    except Exception as e:
-                        print(f"  Confirmation check error: {e}")
+                            print(f"  Not confirmed yet (check {attempt + 1}/5) — waiting...")
+                        except Exception as e:
+                            print(f"  Confirmation check error: {e}")
 
                     if confirmed:
                         log_application("hirist", company, job_title, job_url or new_page.url,
