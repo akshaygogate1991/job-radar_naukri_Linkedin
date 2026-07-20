@@ -367,16 +367,28 @@ def run_naukri_bot():
                                 new_page.keyboard.press("Enter")
                                 human_delay(2, 3)
                             else:
+                                # Can't answer this Naukri question → hand the job to
+                                # the dashboard (with the Naukri URL) so you finish it
+                                # by hand, instead of dropping it silently.
+                                add_manual_job(
+                                    platform="naukri", job_title=job_title, company=company,
+                                    job_url=job_url, match_score=result["match_score"],
+                                    cover_letter=result.get("cover_letter", ""),
+                                    summary=result.get("summary", ""),
+                                )
+                                log_application("naukri", company, job_title, job_url,
+                                                 result['match_score'], status="Manual",
+                                                 notes=f"Chatbot question needs manual answer: {question_text.strip()[:60]}")
                                 send_error_alert(
                                     "naukri",
-                                    f"Unknown chatbot question for '{job_title}' at '{company}': \"{question_text.strip()}\". Job skipped."
+                                    f"Question sent to dashboard for '{job_title}' at '{company}': \"{question_text.strip()[:80]}\""
                                 )
-                                raise Exception("UNKNOWN_QUESTION_SKIP")
+                                print("  → Naukri question I can't answer; sent to dashboard for manual apply.")
+                                raise Exception("SENT_TO_DASHBOARD")
                         else:
                             break
 
-                    # ── CONFIRMATION CHECK: Only log Applied if confirmed ──
-                    human_delay(2, 3)
+                    # ── CONFIRMATION CHECK: poll a few times before giving up ──
                     confirmation_selectors = [
                         "text=successfully applied",
                         "text=Application sent",
@@ -388,13 +400,17 @@ def run_naukri_bot():
                         "button:has-text('Applied')",
                     ]
                     confirmed = False
-                    for sel in confirmation_selectors:
-                        try:
-                            if new_page.locator(sel).count() > 0:
-                                confirmed = True
-                                break
-                        except:
-                            pass
+                    for _c in range(4):          # ~10-12s total
+                        human_delay(2, 3)
+                        for sel in confirmation_selectors:
+                            try:
+                                if new_page.locator(sel).count() > 0:
+                                    confirmed = True
+                                    break
+                            except Exception:
+                                pass
+                        if confirmed:
+                            break
 
                     if confirmed:
                         log_application("naukri", company, job_title, job_url,
@@ -411,7 +427,9 @@ def run_naukri_bot():
                     human_delay(8, 20)
 
                 except Exception as e:
-                    if "UNKNOWN_QUESTION_SKIP" in str(e):
+                    if "SENT_TO_DASHBOARD" in str(e):
+                        pass  # already logged + routed to dashboard above
+                    elif "UNKNOWN_QUESTION_SKIP" in str(e):
                         print("  Skipped due to unknown chatbot question (Telegram alert sent).")
                     else:
                         print(f"  Error on this job: {e}")
