@@ -150,7 +150,8 @@ m1, m2, m3, m4 = st.columns(4)
 m1.metric("To apply", s["pending"])
 m2.metric("Applied", s["applied"])
 m3.metric("Total tracked", s["total"])
-m4.metric("Platforms", len(s["by_platform"]))
+_hidden = sum(1 for j in all_jobs if j.get("status") in ("closed", "discarded"))
+m4.metric("Closed / Removed", _hidden)
 if s["by_platform"]:
     st.caption("Pending by platform: " +
                " · ".join(f"{k}: {v}" for k, v in s["by_platform"].items()))
@@ -174,7 +175,8 @@ def sort_jobs(jobs):
     return sorted(jobs, key=lambda x: x.get("first_seen", ""), reverse=True)
 
 
-tab_apply, tab_done = st.tabs(["📋 To Apply", "✅ Applied"])
+tab_apply, tab_done, tab_gone = st.tabs(
+    ["📋 To Apply", "✅ Applied", "🚫 Closed / Removed"])
 
 
 # signatures (company + role) of everything already applied to —
@@ -183,7 +185,9 @@ def _sig(j):
     return (j.get("company", "").strip().lower(),
             j.get("title", "").strip().lower())
 
-applied_sigs = {_sig(j) for j in all_jobs if j.get("status") == "applied"}
+# hide repeat listings of roles you've applied to OR marked as not relevant
+applied_sigs = {_sig(j) for j in all_jobs
+                if j.get("status") in ("applied", "discarded")}
 
 
 # ── TO APPLY ─────────────────────────────────────────────────────
@@ -231,8 +235,22 @@ with tab_apply:
                         st.markdown(f"[🔗 Open job]({url})")
                 if st.button("✅ Mark Applied", key=key_for(url, "apply"),
                              type="primary", use_container_width=True):
-                    store.mark_applied(url)
+                    store.set_status(url, "applied")
                     st.rerun()
+
+                b1, b2 = st.columns(2)
+                with b1:
+                    if st.button("🚫 Closed", key=key_for(url, "closed"),
+                                 use_container_width=True,
+                                 help="This job opening is closed / expired"):
+                        store.set_status(url, "closed")
+                        st.rerun()
+                with b2:
+                    if st.button("🗑️ Remove", key=key_for(url, "discard"),
+                                 use_container_width=True,
+                                 help="Not matching my profile — hide it for good"):
+                        store.set_status(url, "discarded")
+                        st.rerun()
 
             # cover letter + summary
             if j.get("cover_letter") or j.get("summary"):
@@ -284,4 +302,42 @@ with tab_done:
             c2.markdown(f"[open job]({url})")
         if c3.button("↩ Undo", key=key_for(url, "undo")):
             store.mark_pending(url)
+            st.rerun()
+
+
+# ── CLOSED / REMOVED ─────────────────────────────────────────────
+with tab_gone:
+    closed    = sort_jobs([j for j in all_jobs if j.get("status") == "closed"])
+    discarded = sort_jobs([j for j in all_jobs if j.get("status") == "discarded"])
+
+    st.caption("These are hidden from your To Apply list. "
+               "They're kept (not deleted) so a future sync can't bring them back. "
+               "Use Restore if you hid one by mistake.")
+
+    st.markdown(f"#### 🚫 Closed openings ({len(closed)})")
+    if not closed:
+        st.write("None.")
+    for j in closed:
+        url = j.get("url", "")
+        c1, c2, c3 = st.columns([4, 2, 1])
+        c1.markdown(f"**{j.get('title','')}** — {j.get('company','')} "
+                    f"(`{j.get('platform','')}`, {j.get('score',0)}%)")
+        if url:
+            c2.markdown(f"[open job]({url})")
+        if c3.button("↩ Restore", key=key_for(url, "unclose")):
+            store.set_status(url, "pending")
+            st.rerun()
+
+    st.markdown(f"#### 🗑️ Removed as not relevant ({len(discarded)})")
+    if not discarded:
+        st.write("None.")
+    for j in discarded:
+        url = j.get("url", "")
+        c1, c2, c3 = st.columns([4, 2, 1])
+        c1.markdown(f"**{j.get('title','')}** — {j.get('company','')} "
+                    f"(`{j.get('platform','')}`, {j.get('score',0)}%)")
+        if url:
+            c2.markdown(f"[open job]({url})")
+        if c3.button("↩ Restore", key=key_for(url, "undiscard")):
+            store.set_status(url, "pending")
             st.rerun()

@@ -132,11 +132,29 @@ def mark_applied(url: str) -> None:
 
 
 def mark_pending(url: str) -> None:
-    """Undo an accidental 'applied'."""
+    """Undo an accidental 'applied' / 'closed' / 'discarded'."""
     data = _load()
     if url in data:
         data[url]["status"] = "pending"
         data[url]["applied_at"] = ""
+        _save(data)
+
+
+def set_status(url: str, status: str) -> None:
+    """
+    Set any status: 'pending' | 'applied' | 'closed' | 'discarded'.
+      closed    = the job opening is no longer open
+      discarded = not relevant to my profile ("removed")
+    We keep the row rather than deleting it, so the next scrape/sync can't
+    re-add the same job as new.
+    """
+    data = _load()
+    if url in data:
+        data[url]["status"] = status
+        if status == "applied":
+            data[url]["applied_at"] = datetime.now().isoformat()
+        elif status == "pending":
+            data[url]["applied_at"] = ""
         _save(data)
 
 

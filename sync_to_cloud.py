@@ -39,8 +39,10 @@ def sync() -> dict:
             summary=j.get("summary", ""),
             notes=j.get("notes", ""),
         )
-        if j.get("status") == "applied":
-            cloud_store.mark_applied(url)
+        # carry over any decision made on the laptop (applied / closed / discarded)
+        local_status = j.get("status")
+        if local_status and local_status != "pending":
+            cloud_store.set_status(url, local_status)
         pushed += 1
 
     cloud_store.purge_junk()

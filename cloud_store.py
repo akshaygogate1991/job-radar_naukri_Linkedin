@@ -151,6 +151,30 @@ def mark_pending(url: str) -> None:
         print("cloud_store mark_pending error:", e)
 
 
+def set_status(url: str, status: str) -> None:
+    """
+    Set any status: 'pending' | 'applied' | 'closed' | 'discarded'.
+      closed    = the job opening is no longer open
+      discarded = not relevant to my profile ("removed")
+    Row is kept (not deleted) so a later sync can't re-add it as new.
+    """
+    if not is_configured():
+        return
+    payload = {"status": status}
+    if status == "applied":
+        payload["applied_at"] = datetime.now().isoformat()
+    elif status == "pending":
+        payload["applied_at"] = None
+    try:
+        requests.patch(
+            _rest(_TABLE), params={"url": f"eq.{url}"},
+            headers=_headers({"Prefer": "return=minimal"}),
+            json=payload, timeout=20,
+        )
+    except Exception as e:
+        print("cloud_store set_status error:", e)
+
+
 def purge_junk() -> int:
     """Delete test/junk rows. Returns count removed."""
     if not is_configured():
