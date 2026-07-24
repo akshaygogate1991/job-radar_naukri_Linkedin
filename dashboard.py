@@ -106,10 +106,48 @@ def key_for(url: str, prefix: str) -> str:
     return prefix + "_" + str(abs(hash(url)))
 
 
+# ── cached data access (speed) ───────────────────────────────────
+# Cache the job list so ordinary reruns (filtering, paging) don't re-download
+# everything from Supabase. The cache key holds a version number we bump on any
+# change, so mark-applied / close / remove still update instantly.
+@st.cache_data(ttl=180, show_spinner=False)
+def _fetch_jobs(version):
+    # 'version' is part of the cache key on purpose: bumping it (on any change)
+    # forces a fresh fetch, while plain reruns reuse the cached result.
+    return store.all_jobs()
+
+
+def load_jobs():
+    return _fetch_jobs(st.session_state.get("data_version", 0))
+
+
+def bump_version():
+    st.session_state["data_version"] = st.session_state.get("data_version", 0) + 1
+
+
+def mutate(fn, *args, **kwargs):
+    """Apply a store change, invalidate the cache, and rerun."""
+    fn(*args, **kwargs)
+    bump_version()
+    st.rerun()
+
+
+def compute_stats(jobs):
+    pending = [j for j in jobs if j.get("status") == "pending"]
+    applied = [j for j in jobs if j.get("status") == "applied"]
+    by_platform = {}
+    for j in pending:
+        p = j.get("platform", "other")
+        by_platform[p] = by_platform.get(p, 0) + 1
+    return {"total": len(jobs), "pending": len(pending),
+            "applied": len(applied), "by_platform": by_platform}
+
+
 # ── ensure store is seeded on first ever load ────────────────────
-if not store.all_jobs():
+if not load_jobs():
     with st.spinner("Setting up your job list from existing logs…"):
         store.seed_from_existing(verbose=False)
+        bump_version()
 
 
 # ── sidebar controls ─────────────────────────────────────────────
@@ -118,14 +156,16 @@ st.sidebar.title("🎯 Filters")
 if st.sidebar.button("🔄 Refresh from bot logs"):
     store.purge_junk()
     store.seed_from_existing(verbose=False)
+    bump_version()
     st.rerun()
 
 if st.sidebar.button("🧹 Clean test/duplicate junk"):
     removed = store.purge_junk()
+    bump_version()
     st.sidebar.success(f"Removed {removed} junk records.")
     st.rerun()
 
-all_jobs = store.all_jobs()
+all_jobs = load_jobs()
 platforms = sorted({j.get("platform", "other") for j in all_jobs})
 sel_platforms = st.sidebar.multiselect("Platform", platforms, default=platforms)
 
@@ -141,7 +181,7 @@ st.sidebar.caption(
 
 
 # ── header + metrics ─────────────────────────────────────────────
-s = store.stats()
+s = compute_stats(all_jobs)
 st.title("Job Apply Dashboard")
 _src = "☁️ Supabase (live on all devices)" if DATA_SOURCE == "cloud" else "💻 local file"
 st.caption(f"For {CANDIDATE['name']} · data source: {_src}")
@@ -181,9 +221,30 @@ tab_apply, tab_done, tab_gone = st.tabs(
 
 # signatures (company + role) of everything already applied to —
 # used to hide near-duplicate listings of a job you've already applied for
+def _norm(t):
+    t = (t or "").lower().strip()
+    t = re.sub(r"\b(sr|jr)\b", lambda m: {"sr": "senior", "jr": "junior"}[m.group(0)], t)
+    t = re.sub(r"[^a-z0-9 ]", " ", t)      # drop punctuation
+    t = re.sub(r"\s+", " ", t).strip()      # collapse whitespace
+    return t
+
+
 def _sig(j):
-    return (j.get("company", "").strip().lower(),
-            j.get("title", "").strip().lower())
+    return (_norm(j.get("company", "")), _norm(j.get("title", "")))
+
+
+def dedup(jobs):
+    """One card per company+role; keep highest score / one with a cover letter."""
+    best = {}
+    for j in jobs:
+        sig = _sig(j)
+        cur = best.get(sig)
+        if (cur is None
+                or int(j.get("score", 0) or 0) > int(cur.get("score", 0) or 0)
+                or (j.get("cover_letter") and not cur.get("cover_letter"))):
+            best[sig] = j
+    return list(best.values())
+
 
 # hide repeat listings of roles you've applied to OR marked as not relevant
 applied_sigs = {_sig(j) for j in all_jobs
@@ -197,24 +258,20 @@ with tab_apply:
                    and _sig(j) not in applied_sigs
                    and matches_filters(j)]
 
-    # collapse repeat listings of the same company + role → keep the best one
-    best_by_sig = {}
-    for j in raw_pending:
-        sig = _sig(j)
-        cur = best_by_sig.get(sig)
-        better = (cur is None
-                  or int(j.get("score", 0) or 0) > int(cur.get("score", 0) or 0)
-                  or (j.get("cover_letter") and not cur.get("cover_letter")))
-        if better:
-            best_by_sig[sig] = j
-    pending = sort_jobs(list(best_by_sig.values()))
+    pending = sort_jobs(dedup(raw_pending))
+
+    # pagination — draw a page at a time so the browser isn't rendering
+    # hundreds of cards (the main cause of the app feeling slow/stuck)
+    PAGE = 25
+    shown_n = st.session_state.get("show_n", PAGE)
 
     if not pending:
         st.success("Nothing to apply to with these filters. 🎉")
     else:
-        st.write(f"**{len(pending)} jobs** to apply to.")
+        st.write(f"**{len(pending)} jobs** to apply to "
+                 f"(showing {min(shown_n, len(pending))}).")
 
-    for j in pending:
+    for j in pending[:shown_n]:
         url = j.get("url", "")
         with st.container(border=True):
             top, actions = st.columns([3, 1])
@@ -235,22 +292,19 @@ with tab_apply:
                         st.markdown(f"[🔗 Open job]({url})")
                 if st.button("✅ Mark Applied", key=key_for(url, "apply"),
                              type="primary", use_container_width=True):
-                    store.set_status(url, "applied")
-                    st.rerun()
+                    mutate(store.set_status, url, "applied")
 
                 b1, b2 = st.columns(2)
                 with b1:
                     if st.button("🚫 Closed", key=key_for(url, "closed"),
                                  use_container_width=True,
                                  help="This job opening is closed / expired"):
-                        store.set_status(url, "closed")
-                        st.rerun()
+                        mutate(store.set_status, url, "closed")
                 with b2:
                     if st.button("🗑️ Remove", key=key_for(url, "discard"),
                                  use_container_width=True,
                                  help="Not matching my profile — hide it for good"):
-                        store.set_status(url, "discarded")
-                        st.rerun()
+                        mutate(store.set_status, url, "discarded")
 
             # cover letter + summary
             if j.get("cover_letter") or j.get("summary"):
@@ -288,10 +342,16 @@ with tab_apply:
                             key=key_for(url, "dlmaster"),
                         )
 
+    # ── Show more ──
+    if len(pending) > shown_n:
+        if st.button(f"⬇️ Show more ({len(pending) - shown_n} left)"):
+            st.session_state["show_n"] = shown_n + PAGE
+            st.rerun()
+
 
 # ── APPLIED ──────────────────────────────────────────────────────
 with tab_done:
-    applied = sort_jobs([j for j in all_jobs if j.get("status") == "applied"])
+    applied = sort_jobs(dedup([j for j in all_jobs if j.get("status") == "applied"]))
     st.write(f"**{len(applied)}** jobs marked applied.")
     for j in applied:
         url = j.get("url", "")
@@ -301,14 +361,13 @@ with tab_done:
         if url:
             c2.markdown(f"[open job]({url})")
         if c3.button("↩ Undo", key=key_for(url, "undo")):
-            store.mark_pending(url)
-            st.rerun()
+            mutate(store.mark_pending, url)
 
 
 # ── CLOSED / REMOVED ─────────────────────────────────────────────
 with tab_gone:
-    closed    = sort_jobs([j for j in all_jobs if j.get("status") == "closed"])
-    discarded = sort_jobs([j for j in all_jobs if j.get("status") == "discarded"])
+    closed    = sort_jobs(dedup([j for j in all_jobs if j.get("status") == "closed"]))
+    discarded = sort_jobs(dedup([j for j in all_jobs if j.get("status") == "discarded"]))
 
     st.caption("These are hidden from your To Apply list. "
                "They're kept (not deleted) so a future sync can't bring them back. "
@@ -325,8 +384,7 @@ with tab_gone:
         if url:
             c2.markdown(f"[open job]({url})")
         if c3.button("↩ Restore", key=key_for(url, "unclose")):
-            store.set_status(url, "pending")
-            st.rerun()
+            mutate(store.set_status, url, "pending")
 
     st.markdown(f"#### 🗑️ Removed as not relevant ({len(discarded)})")
     if not discarded:
@@ -339,5 +397,4 @@ with tab_gone:
         if url:
             c2.markdown(f"[open job]({url})")
         if c3.button("↩ Restore", key=key_for(url, "undiscard")):
-            store.set_status(url, "pending")
-            st.rerun()
+            mutate(store.set_status, url, "pending")
