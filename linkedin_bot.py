@@ -281,12 +281,65 @@ def run_linkedin_bot():
 
                         # ── External website ──────────────────
                         if apply_btn_text and "easy apply" not in apply_btn_text:
+                            # Click Apply and capture the REAL company URL from
+                            # the new tab (fresh URLs work; stored ones expire).
+                            external_url = job_url
+                            ext_tab = None
+                            try:
+                                with page.context.expect_page(timeout=12000) as _tab:
+                                    page.locator(
+                                        "div.jobs-apply-button--top-card button,"
+                                        "button.jobs-apply-button"
+                                    ).first.click()
+                                ext_tab = _tab.value
+                                ext_tab.wait_for_load_state("domcontentloaded", timeout=15000)
+                                human_delay(3, 5)
+                                if ext_tab.url and "linkedin.com" not in ext_tab.url:
+                                    external_url = ext_tab.url
+                                    print(f"  Captured company URL: {external_url[:60]}")
+                            except Exception as _e:
+                                print(f"  Could not capture external URL: {_e}")
+
+                            # Workday? → auto-apply right now on the live tab
+                            if ext_tab and "myworkdayjobs.com" in external_url.lower():
+                                print("  Workday site — attempting auto-apply now...")
+                                try:
+                                    from workday_bot import apply_via_workday, notify_unknown_questions
+                                    ok, note = apply_via_workday(ext_tab, {
+                                        "url": external_url,
+                                        "title": job_title, "company": company,
+                                        "summary": result.get("summary", ""),
+                                    })
+                                    if ok:
+                                        log_application("linkedin", company, job_title,
+                                                        external_url, result['match_score'],
+                                                        status="Applied",
+                                                        notes="Auto-applied on company Workday site")
+                                        print(f"  ✅ [Applied on Workday] {company} — {job_title}")
+                                        try:
+                                            ext_tab.close()
+                                        except Exception:
+                                            pass
+                                        human_delay(2, 4)
+                                        continue
+                                    if "manual answer" in note.lower():
+                                        notify_unknown_questions("linkedin-workday", job_title,
+                                                                 company, external_url, note)
+                                    print(f"  Workday auto-apply incomplete ({note}) — to dashboard.")
+                                except Exception as _wde:
+                                    print(f"  Workday attempt error: {_wde} — to dashboard.")
+                            try:
+                                if ext_tab:
+                                    ext_tab.close()
+                            except Exception:
+                                pass
+
                             print(f"  [DIGEST EMAIL] {job_title} at {company} — link will be emailed to you")
                             add_manual_job(
                                 platform="linkedin",
                                 job_title=job_title,
                                 company=company,
-                                job_url=job_url,
+                                job_url=external_url,
                                 match_score=result['match_score'],
                                 cover_letter=result.get('cover_letter', ''),
                                 summary=result['summary']

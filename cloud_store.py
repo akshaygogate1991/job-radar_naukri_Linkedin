@@ -175,6 +175,25 @@ def set_status(url: str, status: str) -> None:
         print("cloud_store set_status error:", e)
 
 
+def expire_stale(days: int = 21) -> int:
+    """Auto-close pending jobs older than `days` (their links go dead)."""
+    from datetime import datetime, timedelta
+    if not is_configured():
+        return 0
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    try:
+        r = requests.patch(
+            _rest(_TABLE),
+            params={"status": "eq.pending", "first_seen": f"lt.{cutoff}"},
+            headers=_headers({"Prefer": "return=representation"}),
+            json={"status": "closed"},
+            timeout=30,
+        )
+        return len(r.json()) if r.ok else 0
+    except Exception:
+        return 0
+
+
 def purge_junk() -> int:
     """Delete test/junk rows. Returns count removed."""
     if not is_configured():

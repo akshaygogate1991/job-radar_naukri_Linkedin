@@ -202,8 +202,13 @@ EASY_APPLY_ANSWERS = {
     "legally authorized to work in india":  "Yes",
     "authorized to work in the united":     "No",
     "legally authorized to work in the":    "No",
-    "require sponsorship":                  "Yes",
-    "visa sponsorship":                     "Yes",
+    "require sponsorship":                  "No",
+    "require employer sponsorship":         "No",
+    "visa sponsorship":                     "No",
+    "evidence of your right to work":       "Yes",
+    "right to work":                        "Yes",
+    "country of residence":                 "India",
+    "preferred work location":              "Any",
     "opt or stem opt":                      "No",
     "currently on opt":                     "No",
 
@@ -283,6 +288,46 @@ EASY_APPLY_ANSWERS = {
     "reason for job change":                "Seeking growth and to fully transition into a data analytics role.",
     "reason for change":                    "Seeking growth and to fully transition into a data analytics role.",
     "reason for looking":                   "Seeking growth and to fully transition into a data analytics role.",
+
+    # Company-website (Workday etc.) application questions
+    "previously worked for":                "No",
+    "previously been employed":             "No",
+    "previously employed by":               "No",
+    "worked for this organization":         "No",
+    "worked for this company":              "No",
+    "former employee":                      "No",
+    "planned vacation":                     "No",
+    "planned leave":                        "No",
+    "appointments in the first":            "No",
+    "criminal":                             "No",
+    "convicted":                            "No",
+    "non-compete":                          "No",
+    "conflict of interest":                 "No",
+    "related to any employee":              "No",
+    "relative working":                     "No",
+    "referred by":                          "No",
+    "government official":                  "No",
+    "background check":                     "Yes",
+    "background verification":              "Yes",
+    "drug test":                            "Yes",
+    "terms and conditions":                 "Yes",
+    "privacy policy":                       "Yes",
+    "18 years":                             "Yes",
+    "immediately available":                "Yes",
+    "willing to work":                      "Yes",
+    "how did you hear":                     "Job portal",
+    "gender":                               "Male",
+    # "date of birth":  "DD-MM-YYYY",   # <-- uncomment and fill your real DOB
+}
+
+# ── Address (used by company-site application forms) ─────────
+# EDIT THESE with your real address — Workday forms require them.
+ADDRESS = {
+    "line1":       "Gogate Wada, vitthal nagar",              # <-- put your street address here
+    "city":        "Karjat",
+    "state":       "Maharashtra",
+    "postal_code": "410201",              # <-- put your real PIN code here
+    "country":     "India",
 }
 
 # ── Platforms ────────────────────────────────────────────────

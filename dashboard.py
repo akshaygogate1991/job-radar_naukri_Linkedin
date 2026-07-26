@@ -156,6 +156,12 @@ st.sidebar.title("🎯 Filters")
 if st.sidebar.button("🔄 Refresh from bot logs"):
     store.purge_junk()
     store.seed_from_existing(verbose=False)
+    try:
+        n = store.expire_stale(21)   # auto-close jobs older than 3 weeks
+        if n:
+            st.sidebar.info(f"Auto-closed {n} stale jobs (>21 days old).")
+    except Exception:
+        pass
     bump_version()
     st.rerun()
 
@@ -171,7 +177,7 @@ sel_platforms = st.sidebar.multiselect("Platform", platforms, default=platforms)
 
 min_score = st.sidebar.slider("Minimum match score", 0, 100, 0, 5)
 search = st.sidebar.text_input("Search title / company").strip().lower()
-sort_by = st.sidebar.radio("Sort by", ["Match score (high→low)", "Newest first"])
+sort_by = st.sidebar.radio("Sort by", ["Newest first", "Match score (high→low)"])
 
 st.sidebar.markdown("---")
 st.sidebar.caption(
@@ -290,6 +296,16 @@ with tab_apply:
                         st.link_button("🔗 Open job", url, use_container_width=True)
                     except Exception:
                         st.markdown(f"[🔗 Open job]({url})")
+                # dead link? one click searches the company's live openings
+                from urllib.parse import quote_plus
+                _q = quote_plus(f'"{j.get("title","")}" {j.get("company","")} careers apply')
+                try:
+                    st.link_button("🔍 Find fresh link",
+                                   f"https://www.google.com/search?q={_q}",
+                                   use_container_width=True,
+                                   help="Old link dead? Search the live posting")
+                except Exception:
+                    pass
                 if st.button("✅ Mark Applied", key=key_for(url, "apply"),
                              type="primary", use_container_width=True):
                     mutate(store.set_status, url, "applied")

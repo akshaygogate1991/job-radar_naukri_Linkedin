@@ -328,6 +328,39 @@ def run_naukri_bot():
                             company_apply_url = job_url
                             print("  Could not capture external URL — using Naukri link as fallback.")
 
+                        # ── FRESH-URL WORKDAY AUTO-APPLY ──
+                        # Stored links expire; apply NOW while the URL is live.
+                        if "myworkdayjobs.com" in company_apply_url.lower():
+                            print("  Workday site detected — attempting auto-apply now...")
+                            try:
+                                from workday_bot import apply_via_workday, notify_unknown_questions
+                                wd_page = new_page.context.new_page()
+                                ok, note = apply_via_workday(wd_page, {
+                                    "url": company_apply_url,
+                                    "title": job_title, "company": company,
+                                    "summary": result.get("summary", ""),
+                                })
+                                try:
+                                    wd_page.close()
+                                except Exception:
+                                    pass
+                                if ok:
+                                    log_application("naukri", company, job_title,
+                                                     company_apply_url,
+                                                     result['match_score'], status="Applied",
+                                                     notes="Auto-applied on company Workday site")
+                                    applied_count += 1
+                                    print(f"  ✅ [Applied on Workday] {company} — {job_title}")
+                                    new_page.close()
+                                    human_delay(3, 5)
+                                    continue
+                                if "manual answer" in note.lower():
+                                    notify_unknown_questions("naukri-workday", job_title,
+                                                             company, company_apply_url, note)
+                                print(f"  Workday auto-apply incomplete ({note}) — sending to dashboard.")
+                            except Exception as _wde:
+                                print(f"  Workday attempt error: {_wde} — sending to dashboard.")
+
                         add_manual_job(
                             platform="naukri",
                             job_title=job_title,

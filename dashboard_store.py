@@ -163,6 +163,26 @@ def all_jobs() -> list:
     return list(_load().values())
 
 
+def expire_stale(days: int = 21) -> int:
+    """
+    Auto-close pending jobs scraped more than `days` ago — their apply links
+    are almost always dead by then (like the expired JLL/Workday redirects).
+    Returns how many were closed. They land in the Closed tab (restorable).
+    """
+    from datetime import datetime, timedelta
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    data = _load()
+    n = 0
+    for url, j in data.items():
+        if j.get("status") == "pending" and (j.get("first_seen") or "9999") < cutoff:
+            j["status"] = "closed"
+            j["notes"] = (j.get("notes") or "") + f" [auto-expired after {days} days]"
+            n += 1
+    if n:
+        _save(data)
+    return n
+
+
 def purge_junk() -> int:
     """Physically remove junk/test records from disk. Returns count removed."""
     raw = _read_file(STORE_FILE)
