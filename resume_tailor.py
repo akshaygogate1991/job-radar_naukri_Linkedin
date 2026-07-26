@@ -140,6 +140,24 @@ RESUME MODIFICATION RULES:
     return result
 
 
+def api_ok() -> tuple:
+    """Pre-flight check: is the Anthropic API reachable and funded?
+    Returns (True, '') or (False, reason). Costs ~nothing (1 token)."""
+    try:
+        client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        return True, ""
+    except Exception as e:
+        msg = str(e)
+        if "credit balance" in msg.lower():
+            return False, ("API CREDITS EXHAUSTED — top up at "
+                           "console.anthropic.com → Plans & Billing")
+        return False, f"API check failed: {msg[:120]}"
+
+
 def should_apply(tailor_result: dict) -> bool:
     """Returns True if match score is good enough to apply."""
     score = tailor_result.get("match_score", 0)

@@ -142,7 +142,9 @@ def send_daily_summary():
     body += "Date    : " + date_str + "\n"
     body += "LinkedIn: " + str(today['linkedin']) + " applied\n"
     body += "Naukri  : " + str(today['naukri']) + " applied\n"
+    body += "Hirist  : " + str(today.get('hirist', 0)) + " applied\n"
     body += "Total   : " + str(today['total']) + " applied today\n"
+    body += "  of which on company Workday sites: " + str(today.get('workday', 0)) + "\n"
     body += "Skipped : " + str(today['skipped']) + " (low match / already applied)\n"
     body += "All-time: " + str(all_time['total_applied']) + " total applications\n\n"
 

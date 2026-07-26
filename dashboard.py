@@ -296,16 +296,6 @@ with tab_apply:
                         st.link_button("🔗 Open job", url, use_container_width=True)
                     except Exception:
                         st.markdown(f"[🔗 Open job]({url})")
-                # dead link? one click searches the company's live openings
-                from urllib.parse import quote_plus
-                _q = quote_plus(f'"{j.get("title","")}" {j.get("company","")} careers apply')
-                try:
-                    st.link_button("🔍 Find fresh link",
-                                   f"https://www.google.com/search?q={_q}",
-                                   use_container_width=True,
-                                   help="Old link dead? Search the live posting")
-                except Exception:
-                    pass
                 if st.button("✅ Mark Applied", key=key_for(url, "apply"),
                              type="primary", use_container_width=True):
                     mutate(store.set_status, url, "applied")

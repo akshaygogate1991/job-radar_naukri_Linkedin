@@ -85,7 +85,8 @@ def get_todays_summary() -> dict:
     """Returns count of today's applications per platform."""
     log = _load_json_log()
     today = datetime.now().date().isoformat()
-    summary = {"linkedin": 0, "naukri": 0, "hirist": 0, "total": 0, "applied": [], "skipped": 0}
+    summary = {"linkedin": 0, "naukri": 0, "hirist": 0, "workday": 0,
+               "total": 0, "applied": [], "skipped": 0}
 
     for entry in log:
         if entry["date"].startswith(today):
@@ -93,6 +94,9 @@ def get_todays_summary() -> dict:
                 p = entry.get("platform", "other")
                 summary[p] = summary.get(p, 0) + 1
                 summary["total"] += 1
+                # applies completed on a company's Workday site (via any portal)
+                if "workday" in (entry.get("notes") or "").lower():
+                    summary["workday"] += 1
                 summary["applied"].append({
                     "company":    entry["company"],
                     "job_title":  entry["job_title"],

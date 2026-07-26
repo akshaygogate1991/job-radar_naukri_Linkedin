@@ -51,9 +51,27 @@ SUPABASE_URL = _cfg("SUPABASE_URL").rstrip("/")
 SUPABASE_KEY = _cfg("SUPABASE_KEY")
 _TABLE = "jobs"
 
+# circuit breaker: after the first "can't reach Supabase" error, skip all
+# further cloud calls this run instead of printing hundreds of errors.
+_offline = False
+
+
+def _mark_offline(e):
+    global _offline
+    msg = str(e)
+    if not _offline and ("Failed to resolve" in msg or "NameResolution" in msg
+                         or "Max retries exceeded" in msg):
+        _offline = True
+        print("\n" + "!" * 60)
+        print("  SUPABASE UNREACHABLE — likely the free project is PAUSED.")
+        print("  Fix: supabase.com/dashboard → your project → Restore project,")
+        print("  then run:  python sync_to_cloud.py")
+        print("  (Skipping further cloud calls this run; local data is safe.)")
+        print("!" * 60 + "\n")
+
 
 def is_configured() -> bool:
-    return bool(SUPABASE_URL and SUPABASE_KEY)
+    return bool(SUPABASE_URL and SUPABASE_KEY) and not _offline
 
 
 def _headers(extra: dict = None) -> dict:
@@ -90,6 +108,7 @@ def all_jobs() -> list:
                 if not _is_junk(row.get("url", ""), row.get("company", ""))]
     except Exception as e:
         print("cloud_store all_jobs error:", e)
+        _mark_offline(e)
         return []
 
 
@@ -121,6 +140,7 @@ def add_job(platform: str, title: str, company: str, url: str,
         )
     except Exception as e:
         print("cloud_store add_job error:", e)
+        _mark_offline(e)
 
 
 def mark_applied(url: str) -> None:
@@ -135,6 +155,7 @@ def mark_applied(url: str) -> None:
         )
     except Exception as e:
         print("cloud_store mark_applied error:", e)
+        _mark_offline(e)
 
 
 def mark_pending(url: str) -> None:
@@ -149,6 +170,7 @@ def mark_pending(url: str) -> None:
         )
     except Exception as e:
         print("cloud_store mark_pending error:", e)
+        _mark_offline(e)
 
 
 def set_status(url: str, status: str) -> None:
@@ -173,6 +195,7 @@ def set_status(url: str, status: str) -> None:
         )
     except Exception as e:
         print("cloud_store set_status error:", e)
+        _mark_offline(e)
 
 
 def expire_stale(days: int = 21) -> int:

@@ -65,6 +65,21 @@ def main():
     if already_ran_today():
         print("Agent already ran today. Exiting.")
 
+    # ── Pre-flight: is the Claude API funded? ────────────────
+    # Without it no job can be scored/tailored — abort early instead of
+    # spending an hour clicking through jobs that will all fail.
+    try:
+        from resume_tailor import api_ok
+        ok, why = api_ok()
+        if not ok:
+            print("\n" + "!" * 55)
+            print("  ABORTING RUN: " + why)
+            print("!" * 55)
+            send_error_alert("system", why)
+            return
+    except Exception as _e:
+        print(f"Pre-flight check skipped: {_e}")
+
     clear_digest()  # reset manual jobs list for this run
     linkedin_count = 0
     naukri_count   = 0
